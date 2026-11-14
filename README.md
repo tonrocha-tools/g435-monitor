@@ -7,7 +7,7 @@ Aplicativo independente para Windows 11 que mostra a bateria do
 
 ## Recursos
 
-- Leitura da bateria pelo dongle LIGHTSPEED (`046D:0ADF`, interface HID `MI_00`).
+- Leitura da bateria pelo dongle LIGHTSPEED.
 - Percentual com histerese de 2%, tensão em mV e estado **Conectado/Desconectado**.
 - Ícone de bandeja dinâmico: bateria com preenchimento proporcional e cores por
   nível (vermelho ≤10%, âmbar 11–39%, verde ≥40%).
@@ -56,10 +56,6 @@ de OTA/DFU é usado.
   variar alguns pontos.
 - Funciona somente com o G435 LIGHTSPEED (`046D:0ADF`); não abre outros
   dispositivos Logitech.
-- O estado de carga (carregando/não carregando) não é exibido porque não foi
-  confirmado no hardware. Testes com o comando `0xE6` e capturas passivas não
-  forneceram um bit confiável.
-- Feche programas que disputem a interface HID se a leitura falhar.
 
 ## Privacidade
 
