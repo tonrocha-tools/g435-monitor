@@ -1,0 +1,25 @@
+# Build
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+
+# Local-only research, diagnostics and references
+references/
+tools/
+tests/
+docs/
+src/G435Diagnostics/
+src/G435Monitor/app-icon.png
+
+# Local runtime files
+logs/
+*.log
+config.json
+state.json
+
+# OS/editor
+.DS_Store
+Thumbs.db
