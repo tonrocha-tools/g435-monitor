@@ -11,12 +11,16 @@ Aplicativo independente para Windows 11 que mostra a bateria do
 - Percentual com histerese de 2%, tensão em mV e estado **Conectado/Desconectado**.
 - Ícone de bandeja dinâmico: bateria com preenchimento proporcional e cores por
   nível (vermelho ≤10%, âmbar 11–39%, verde ≥40%).
+- **Tempo restante estimado** pela descida real da tensão (ex.: “~14 h”),
+  com “—” até haver dados suficientes.
+- **Notificações de bateria baixa** em 20%, 10% e 5%, uma vez por ciclo de
+  descarga; podem ser desativadas nas Configurações.
+- **Estado desconectado claro:** ícone cinza/riscado na bandeja e dica na
+  janela com instruções quando o fone está desligado ou o dongle ausente.
+- Atualização automática ao voltar do standby e ao reconectar o dongle USB.
 - Bandeja, instância única, iniciar com o Windows e intervalo de
   5/10/15/30 minutos.
 - Sem G HUB, sem telemetria e sem acesso à rede.
-- **Não exibe estado de carga**: o G435 não expõe um flag confiável no
-  protocolo testado. O percentual é mantido estável quando há indício de
-  subida de tensão, para evitar o salto 70→100 durante a carga.
 
 ## Requisitos
 

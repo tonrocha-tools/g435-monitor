@@ -8,6 +8,7 @@ public sealed class AppSettings
 {
     public bool StartWithWindows { get; set; }
     public bool MinimizeToTray { get; set; } = true;
+    public bool LowBatteryNotifications { get; set; } = true;
     public int IntervalMinutes { get; set; } = 5;
 
     public static readonly int[] AllowedIntervals = { 5, 10, 15, 30 };
@@ -60,7 +61,7 @@ public sealed class AppSettings
 
             AppLog.Write(
                 $"settings: salvo start={StartWithWindows} tray={MinimizeToTray} " +
-                $"interval={IntervalMinutes}");
+                $"lowBattery={LowBatteryNotifications} interval={IntervalMinutes}");
         }
         catch (Exception ex)
         {
@@ -103,6 +104,7 @@ public sealed class AppSettings
     {
         StartWithWindows = StartWithWindows,
         MinimizeToTray = MinimizeToTray,
+        LowBatteryNotifications = LowBatteryNotifications,
         IntervalMinutes = IntervalMinutes
     };
 }

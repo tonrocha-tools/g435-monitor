@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Win32;
 
 namespace G435Monitor;
 
@@ -20,10 +22,24 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private bool _settingsOpen;
     private int? _displayedPct;
     private readonly List<(DateTime Time, int Mv)> _voltageHistory = new();
+    private readonly List<(DateTime Time, int Pct)> _dischargeHistory = new();
     private bool _inferredCharging;
     private int _chargingPeakMv;
     private int? _frozenPct;
     private bool _wasCharging;
+
+    private static readonly int[] LowBatteryThresholds = { 20, 10, 5 };
+    private const int LowBatteryResetPercent = 25;
+    private static readonly TimeSpan DischargeWindow = TimeSpan.FromMinutes(60);
+    private readonly HashSet<int> _notifiedThresholds = new();
+
+    private const int WmDeviceChange = 0x0219;
+    private const int DbtDeviceArrival = 0x8000;
+    private const int DbtDeviceRemoveComplete = 0x8004;
+
+    private HwndSource? _hwndSource;
+    private bool _deviceRefreshScheduled;
+    private DateTime _lastDeviceRefresh = DateTime.MinValue;
 
     public MainWindow() : this(new AppSettings())
     {
@@ -53,8 +69,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             await RefreshAsync();
         };
 
+        SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
+
         Closing += Window_Closing;
         Closed += Window_Closed;
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        // Observa chegada/remoção de USB para reler quando o dongle voltar.
+        _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+        _hwndSource?.AddHook(WndProc);
     }
 
     public void ShowFromTray()
@@ -80,6 +107,14 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         _disposed = true;
         _timer.Stop();
+        SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
+
+        if (_hwndSource is not null)
+        {
+            _hwndSource.RemoveHook(WndProc);
+            _hwndSource = null;
+        }
+
         _tray?.Dispose();
         _tray = null;
     }
@@ -186,6 +221,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             StatusPill.Background = new SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(0x33, 0xB3, 0x26, 0x1E));
             StatusPill.ToolTip = ex.Message;
+            ShowHint(ex.Message);
             UpdatedText.Text = $"Última tentativa: {DateTime.Now:HH:mm:ss}";
             ResetChargingState();
             _tray?.Update(null, null, connected: false);
@@ -206,6 +242,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             _last = reading;
 
             bool charging = UpdateChargingState(mv);
+            string? remaining = UpdateRemainingEstimate(charging, mv, pct);
             int shown;
 
             if (charging)
@@ -235,15 +272,21 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
             RenderBattery(shown);
             MillivoltsText.Text = $"{mv} mV";
+            RemainingText.Text = $"Restante estimado: {remaining ?? "—"}";
             StatusText.Text = "Conectado";
             StatusText.Foreground = new SolidColorBrush(
                 System.Windows.Media.Color.FromRgb(0x7B, 0xD8, 0x8A));
             StatusPill.Background = new SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(0x33, 0x2E, 0x7D, 0x32));
             StatusPill.ToolTip = null;
+            HideHint();
             UpdatedText.Text = $"Última atualização: {DateTime.Now:HH:mm:ss}";
 
-            _tray?.Update(shown, mv, connected: true);
+            _tray?.Update(shown, mv, connected: true, remaining);
+
+            if (!charging)
+                CheckLowBatteryNotifications(shown);
+
             return;
         }
 
@@ -254,6 +297,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         StatusPill.Background = new SolidColorBrush(
             System.Windows.Media.Color.FromArgb(0x33, 0xB3, 0x26, 0x1E));
         StatusPill.ToolTip = reading.Error;
+        ShowHint(reading.Error);
         UpdatedText.Text = $"Última tentativa: {DateTime.Now:HH:mm:ss}";
         ResetChargingState();
         _tray?.Update(null, null, connected: false);
@@ -272,6 +316,66 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             MillivoltsText.Text = $"{_last.Millivolts} mV · última leitura";
         }
+    }
+
+    private string? UpdateRemainingEstimate(bool charging, int mv, int rawPct)
+    {
+        if (charging)
+        {
+            _dischargeHistory.Clear();
+            return null;
+        }
+
+        // _wasCharging ainda é a leitura anterior: limpa o histórico de carga
+        // antes de adicionar a primeira leitura pós-carga.
+        if (_wasCharging)
+            _dischargeHistory.Clear();
+
+        DateTime now = DateTime.UtcNow;
+        _dischargeHistory.RemoveAll(p => now - p.Time > DischargeWindow);
+        _dischargeHistory.Add((now, BatteryService.MillivoltsToPercent(mv)));
+
+        return RemainingEstimator.Format(
+            RemainingEstimator.EstimateMinutes(_dischargeHistory, rawPct));
+    }
+
+    private void CheckLowBatteryNotifications(int shown)
+    {
+        // Recarga real: permite notificar de novo no próximo ciclo de descarga.
+        if (shown >= LowBatteryResetPercent)
+        {
+            _notifiedThresholds.Clear();
+            return;
+        }
+
+        if (!_settings.LowBatteryNotifications || _tray is null)
+            return;
+
+        // Somente o limiar mais severo aplicável nesta leitura.
+        int threshold = 0;
+        foreach (int candidate in LowBatteryThresholds)
+        {
+            if (shown <= candidate && !_notifiedThresholds.Contains(candidate)
+                && (threshold == 0 || candidate < threshold))
+            {
+                threshold = candidate;
+            }
+        }
+
+        if (threshold == 0)
+            return;
+
+        // Limiares pulados nesta queda não devem alertar depois.
+        foreach (int candidate in LowBatteryThresholds)
+        {
+            if (candidate >= threshold)
+                _notifiedThresholds.Add(candidate);
+        }
+
+        _tray.ShowBatteryNotification(
+            threshold <= 5 ? "Bateria crítica" : "Bateria baixa",
+            $"G435: {shown}% restante. Conecte o cabo USB-C para carregar.",
+            warning: threshold <= 10);
     }
 
     private int ApplyHysteresis(int rawPct)
@@ -341,10 +445,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void ResetChargingState()
     {
         _voltageHistory.Clear();
+        _dischargeHistory.Clear();
         _inferredCharging = false;
         _chargingPeakMv = 0;
         _frozenPct = null;
         _wasCharging = false;
+        RemainingText.Text = "Restante estimado: —";
     }
 
     private void RenderBattery(int shown)
@@ -360,6 +466,118 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             _ => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF2, 0x6D, 0x6D))
         };
         BatteryBar.Foreground = BatteryText.Foreground;
+    }
+
+    private void SystemEvents_PowerModeChanged(
+        object sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode != PowerModes.Resume || _disposed || Dispatcher.HasShutdownStarted)
+            return;
+
+        // O evento chega em thread do sistema; a leitura roda na UI.
+        Dispatcher.BeginInvoke(new Action(
+            () => _ = DelayedRefreshAsync(TimeSpan.FromSeconds(2))));
+    }
+
+    private async Task DelayedRefreshAsync(TimeSpan delay)
+    {
+        await Task.Delay(delay);
+
+        if (!_disposed)
+            await RefreshAsync();
+    }
+
+    private IntPtr WndProc(
+        IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmDeviceChange)
+        {
+            int eventType = wParam.ToInt32();
+            if (eventType is DbtDeviceArrival or DbtDeviceRemoveComplete)
+                ScheduleDeviceRefresh();
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private void ScheduleDeviceRefresh()
+    {
+        // Eventos em rajada (ex.: vários dispositivos) geram uma só leitura.
+        if (_disposed || _deviceRefreshScheduled)
+            return;
+
+        _deviceRefreshScheduled = true;
+        _ = DebouncedDeviceRefreshAsync();
+    }
+
+    private async Task DebouncedDeviceRefreshAsync()
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1.5));
+        }
+        finally
+        {
+            _deviceRefreshScheduled = false;
+        }
+
+        if (_disposed)
+            return;
+
+        DateTime now = DateTime.UtcNow;
+        if (now - _lastDeviceRefresh < TimeSpan.FromSeconds(5))
+            return;
+
+        _lastDeviceRefresh = now;
+        await RefreshAsync();
+    }
+
+    private void ShowHint(string? error)
+    {
+        HintText.Text = FriendlyError(error);
+        HintText.Visibility = Visibility.Visible;
+    }
+
+    private void HideHint()
+    {
+        HintText.Text = string.Empty;
+        HintText.Visibility = Visibility.Collapsed;
+    }
+
+    private static string FriendlyError(string? error)
+    {
+        const string dongleMessage =
+            "Dongle LIGHTSPEED não encontrado. Verifique o USB. " +
+            "No modo Bluetooth o app não lê a bateria. " +
+            "Feche G HUB/LogiTune se o problema persistir.";
+
+        if (string.IsNullOrWhiteSpace(error))
+            return "Não foi possível ler a bateria. Verifique o fone e o dongle.";
+
+        // Fone desligado/fora de alcance ou sem confirmação do modo remoto.
+        // Vem antes do dongle porque "não entrou em modo remoto" também cita o dongle.
+        if (error.Contains("modo", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("SET_MODE", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("GET_MODE", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("GET_BATTERY", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("sem resposta", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Fone desligado, fora de alcance ou ocupado. " +
+                   "Ligue o G435 e tente novamente.";
+        }
+
+        // Dongle ausente ou interface HID inacessível.
+        if (error.Contains("dongle", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("HID", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("SetupDi", StringComparison.OrdinalIgnoreCase))
+        {
+            return dongleMessage;
+        }
+
+        if (error.Contains("implausível", StringComparison.OrdinalIgnoreCase))
+            return "Leitura inválida do dongle. Tente novamente.";
+
+        return "Não foi possível ler a bateria. Verifique o fone e o dongle.";
     }
 
     private void RestartTimer()

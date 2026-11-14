@@ -4,7 +4,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Configurações"
                  Icon="app.ico"
-                 Width="420" Height="410"
+                 Width="420" Height="450"
                  ResizeMode="NoResize"
                  WindowStartupLocation="CenterScreen"
                  ShowInTaskbar="False"
@@ -44,6 +44,10 @@
 
                 <ui:ToggleSwitch x:Name="MinimizeToTrayToggle"
                                  Content="Minimizar para a bandeja ao fechar"
+                                 Margin="0,16,0,0" />
+
+                <ui:ToggleSwitch x:Name="LowBatteryNotificationsToggle"
+                                 Content="Notificar bateria baixa (20%, 10%, 5%)"
                                  Margin="0,16,0,0" />
 
                 <TextBlock Text="Intervalo de atualização"

@@ -13,6 +13,7 @@ internal sealed class TrayIcon : IDisposable
     private readonly WinForms.NotifyIcon _icon;
     private readonly WinForms.ContextMenuStrip _menu;
     private readonly Dictionary<int, Drawing.Icon> _batteryIcons = new();
+    private Drawing.Icon? _disconnectedIcon;
     private int? _lastPercent;
     private int? _lastMillivolts;
     private bool _balloonShown;
@@ -37,26 +38,26 @@ internal sealed class TrayIcon : IDisposable
         _icon.DoubleClick += (_, _) => onOpen();
     }
 
-    public void Update(int? percent, int? millivolts, bool connected)
+    public void Update(
+        int? percent, int? millivolts, bool connected, string? remaining = null)
     {
         if (connected && percent is int pct && millivolts is int mv)
         {
             _lastPercent = pct;
             _lastMillivolts = mv;
 
-            _icon.Text = $"G435: {pct}% · {mv} mV";
+            _icon.Text = string.IsNullOrEmpty(remaining)
+                ? $"G435: {pct}% · {mv} mV"
+                : $"G435: {pct}% · {mv} mV · {remaining}";
             SetBatteryIcon(pct);
+            return;
         }
-        else if (_lastPercent is int lastPct)
-        {
-            _icon.Text = _lastMillivolts is int lastMv
-                ? $"G435: {lastPct}% · {lastMv} mV (última)"
-                : $"G435: {lastPct}% (última)";
-        }
-        else
-        {
-            _icon.Text = "G435: desconectado";
-        }
+
+        // Desconectado: nunca reaproveita o último ícone de percentual.
+        _icon.Text = _lastPercent is int lastPct && _lastMillivolts is int lastMv
+            ? $"G435: desconectado · última {lastPct}% · {lastMv} mV"
+            : "G435: desconectado";
+        _icon.Icon = GetDisconnectedIcon();
     }
 
     private void SetBatteryIcon(int percent)
@@ -113,6 +114,51 @@ internal sealed class TrayIcon : IDisposable
         return ToIcon(bitmap);
     }
 
+    private Drawing.Icon GetDisconnectedIcon()
+    {
+        // Um único ícone cinza com barra diagonal, reutilizado entre leituras.
+        _disconnectedIcon ??= CreateDisconnectedIcon();
+        return _disconnectedIcon!;
+    }
+
+    private static Drawing.Icon CreateDisconnectedIcon()
+    {
+        const int size = 32;
+
+        using var bitmap = new Drawing.Bitmap(
+            size, size, Imaging.PixelFormat.Format32bppArgb);
+        using Drawing.Graphics graphics = Drawing.Graphics.FromImage(bitmap);
+
+        graphics.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias;
+        graphics.Clear(Drawing.Color.Transparent);
+
+        bool lightTaskbar = UseLightTaskbar();
+        Drawing.Color outlineColor = lightTaskbar
+            ? Drawing.Color.FromArgb(0x1A, 0x22, 0x2C)
+            : Drawing.Color.FromArgb(0xF2, 0xF6, 0xFA);
+        Drawing.Color bodyColor = lightTaskbar
+            ? Drawing.Color.FromArgb(0xA6, 0xAE, 0xB8)
+            : Drawing.Color.FromArgb(0x5F, 0x6E, 0x7E);
+
+        using var outline = new Drawing.Pen(outlineColor, 2f);
+        using var body = new Drawing.SolidBrush(bodyColor);
+
+        // Corpo e conector da bateria, ambos em cinza.
+        graphics.FillRectangle(body, 4, 9, 20, 14);
+        graphics.DrawRectangle(outline, 2, 7, 24, 18);
+        graphics.FillRectangle(outline.Brush, 26, 12, 4, 8);
+
+        // Barra diagonal indicando desconexão.
+        using var slash = new Drawing.Pen(outlineColor, 3.5f)
+        {
+            StartCap = Drawing2D.LineCap.Round,
+            EndCap = Drawing2D.LineCap.Round
+        };
+        graphics.DrawLine(slash, 5, 25, 27, 7);
+
+        return ToIcon(bitmap);
+    }
+
     private static Drawing.Icon ToIcon(Drawing.Bitmap bitmap)
     {
         IntPtr handle = bitmap.GetHicon();
@@ -156,6 +202,15 @@ internal sealed class TrayIcon : IDisposable
             tipTitle: "G435 Battery",
             tipText: "O app continua rodando na bandeja. Clique no ícone para abrir.",
             tipIcon: WinForms.ToolTipIcon.Info);
+    }
+
+    public void ShowBatteryNotification(string title, string message, bool warning)
+    {
+        _icon.ShowBalloonTip(
+            timeout: 5000,
+            tipTitle: title,
+            tipText: message,
+            tipIcon: warning ? WinForms.ToolTipIcon.Warning : WinForms.ToolTipIcon.Info);
     }
 
     private static Drawing.Icon LoadIcon()
@@ -202,5 +257,7 @@ internal sealed class TrayIcon : IDisposable
             icon.Dispose();
 
         _batteryIcons.Clear();
+        _disconnectedIcon?.Dispose();
+        _disconnectedIcon = null;
     }
 }

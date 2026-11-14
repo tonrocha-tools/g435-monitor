@@ -263,7 +263,7 @@ public sealed class BatteryService
         (3600, 15), (3550, 10), (3500, 5), (3400, 0)
     };
 
-    private static int MillivoltsToPercent(int mv)
+    internal static int MillivoltsToPercent(int mv)
     {
         if (mv >= Curve[0].Mv)
             return 100;

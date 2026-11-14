@@ -14,6 +14,7 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         Settings = current.Clone();
         StartWithWindowsToggle.IsChecked = Settings.StartWithWindows;
         MinimizeToTrayToggle.IsChecked = Settings.MinimizeToTray;
+        LowBatteryNotificationsToggle.IsChecked = Settings.LowBatteryNotifications;
 
         foreach (ComboBoxItem item in IntervalCombo.Items)
         {
@@ -42,6 +43,7 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         {
             StartWithWindows = StartWithWindowsToggle.IsChecked == true,
             MinimizeToTray = MinimizeToTrayToggle.IsChecked == true,
+            LowBatteryNotifications = LowBatteryNotificationsToggle.IsChecked == true,
             IntervalMinutes = interval
         };
         Settings.Normalize();
