@@ -12,7 +12,7 @@ Aplicativo independente para Windows 11 que mostra a bateria do
 - Ícone de bandeja dinâmico: bateria com preenchimento proporcional e cores por
   nível (vermelho ≤10%, âmbar 11–39%, verde ≥40%).
 - **Tempo estimado** pela descida real da tensão (ex.: “~14 h”),
-  com “—” até haver dados suficientes.
+  com “aguardando leituras” até haver dados suficientes.
 - **Notificações de bateria baixa** em 20%, 10% e 5%, uma vez por ciclo de
   descarga; podem ser desativadas nas Configurações.
 - **Estado desconectado claro:** ícone cinza/riscado na bandeja e dica na
@@ -33,6 +33,8 @@ Aplicativo independente para Windows 11 que mostra a bateria do
 1. Baixe o ZIP em [Releases](../../releases/latest).
 2. Extraia e execute `G435Monitor.exe`.
 3. Fechar a janela minimiza para a bandeja. Use o menu da bandeja para sair.
+
+Histórico de mudanças: [CHANGELOG.md](CHANGELOG.md).
 
 ## Compilar
 
