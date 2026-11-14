@@ -11,7 +11,7 @@
     <AssemblyName>G435Monitor</AssemblyName>
     <RootNamespace>G435Monitor</RootNamespace>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Description>Monitor de bateria para o Logitech G435 LIGHTSPEED sem G HUB.</Description>
     <Authors>tonrocha-tools</Authors>
   </PropertyGroup>

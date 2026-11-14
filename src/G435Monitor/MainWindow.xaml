@@ -72,7 +72,7 @@
                            Margin="0,12,0,0" />
 
                 <TextBlock x:Name="RemainingText"
-                           Text="Restante estimado: —"
+                           Text="Tempo estimado: —"
                            Foreground="#8FA3B8"
                            FontSize="12"
                            Margin="0,4,0,0" />

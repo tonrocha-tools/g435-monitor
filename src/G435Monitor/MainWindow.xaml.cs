@@ -272,7 +272,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
             RenderBattery(shown);
             MillivoltsText.Text = $"{mv} mV";
-            RemainingText.Text = $"Restante estimado: {remaining ?? "—"}";
+            RemainingText.Text = $"Tempo estimado: {remaining ?? "—"}";
             StatusText.Text = "Conectado";
             StatusText.Foreground = new SolidColorBrush(
                 System.Windows.Media.Color.FromRgb(0x7B, 0xD8, 0x8A));
@@ -450,7 +450,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _chargingPeakMv = 0;
         _frozenPct = null;
         _wasCharging = false;
-        RemainingText.Text = "Restante estimado: —";
+        RemainingText.Text = "Tempo estimado: —";
     }
 
     private void RenderBattery(int shown)
