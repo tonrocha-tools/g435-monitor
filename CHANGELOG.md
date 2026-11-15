@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0] — 2026-11-15
+
+### Added
+
+- **Início minimizado**: ao iniciar com o Windows, o app abre apenas com o
+  ícone na bandeja, sem exibir a janela. Abrir o app manualmente continua
+  mostrando a janela normalmente.
+
 ## [1.1.3] — 2026-11-14
 
 ### Changed

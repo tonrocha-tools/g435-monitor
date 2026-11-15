@@ -20,6 +20,8 @@ Aplicativo independente para Windows 11 que mostra a bateria do
 - Atualização automática ao voltar do standby e ao reconectar o dongle USB.
 - Bandeja, instância única, iniciar com o Windows e intervalo de
   5/10/15/30 minutos.
+- Ao iniciar com o Windows, o app abre **direto na bandeja**, sem exibir a
+  janela.
 - Sem G HUB, sem telemetria e sem acesso à rede.
 
 ## Requisitos
@@ -33,6 +35,7 @@ Aplicativo independente para Windows 11 que mostra a bateria do
 1. Baixe o ZIP em [Releases](../../releases/latest).
 2. Extraia e execute `G435Monitor.exe`.
 3. Fechar a janela minimiza para a bandeja. Use o menu da bandeja para sair.
+   Abrir o app de novo (atalho, menu Iniciar) apenas traz a janela de volta.
 
 Histórico de mudanças: [CHANGELOG.md](CHANGELOG.md).
 

@@ -19,6 +19,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private BatteryReading? _last;
     private bool _exitRequested;
     private bool _disposed;
+    private bool _monitoringStarted;
     private bool _settingsOpen;
     private int? _displayedPct;
     private readonly List<(DateTime Time, int Mv)> _voltageHistory = new();
@@ -63,11 +64,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             onSettings: () => Dispatcher.BeginInvoke(new Action(OpenSettings)),
             onExit: () => Dispatcher.BeginInvoke(new Action(ExitApp)));
 
-        Loaded += async (_, _) =>
-        {
-            RestartTimer();
-            await RefreshAsync();
-        };
+        Loaded += (_, _) => StartMonitoring();
 
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
 
@@ -82,6 +79,27 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // Observa chegada/remoção de USB para reler quando o dongle voltar.
         _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
         _hwndSource?.AddHook(WndProc);
+    }
+
+    /// <summary>
+    /// Inicia com a janela oculta, apenas na bandeja (usado no autostart).
+    /// </summary>
+    public void StartHidden()
+    {
+        // Cria o HWND sem exibir a janela, para os hooks de USB e de energia
+        // valerem desde o boot.
+        _ = new WindowInteropHelper(this).EnsureHandle();
+        StartMonitoring();
+    }
+
+    private void StartMonitoring()
+    {
+        if (_monitoringStarted || _disposed)
+            return;
+
+        _monitoringStarted = true;
+        RestartTimer();
+        _ = RefreshAsync();
     }
 
     public void ShowFromTray()
