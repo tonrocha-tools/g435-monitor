@@ -75,7 +75,8 @@
                            Text="Tempo estimado: aguardando leituras"
                            Foreground="#8FA3B8"
                            FontSize="12"
-                           Margin="0,4,0,0" />
+                           Margin="0,4,0,0"
+                           ToolTip="Baseado no consumo dos últimos 30 min; volume, jogos e pausas mudam a estimativa." />
 
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                     <Border x:Name="StatusPill"

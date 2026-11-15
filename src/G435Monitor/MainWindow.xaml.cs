@@ -30,7 +30,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private static readonly int[] LowBatteryThresholds = { 20, 10, 5 };
     private const int LowBatteryResetPercent = 25;
-    private static readonly TimeSpan DischargeWindow = TimeSpan.FromMinutes(60);
+    private static readonly TimeSpan DischargeWindow = TimeSpan.FromMinutes(30);
     private readonly HashSet<int> _notifiedThresholds = new();
 
     private const int WmDeviceChange = 0x0219;

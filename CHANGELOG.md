@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3] — 2026-11-14
+
+### Changed
+
+- O tempo estimado agora usa o consumo dos **últimos 30 min** (antes 60 min).
+- Adicionado tooltip no tempo estimado explicando que volume, jogos e pausas
+  mudam a estimativa.
+
 ## [1.1.2] — 2026-11-14
 
 ### Changed

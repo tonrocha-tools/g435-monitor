@@ -11,8 +11,8 @@ Aplicativo independente para Windows 11 que mostra a bateria do
 - Percentual com histerese de 2%, tensão em mV e estado **Conectado/Desconectado**.
 - Ícone de bandeja dinâmico: bateria com preenchimento proporcional e cores por
   nível (vermelho ≤10%, âmbar 11–39%, verde ≥40%).
-- **Tempo estimado** pela descida real da tensão (ex.: “~14 h”),
-  com “aguardando leituras” até haver dados suficientes.
+- **Tempo estimado** com base no consumo dos últimos 30 min
+  (ex.: “~14 h”), com “aguardando leituras” até haver dados suficientes.
 - **Notificações de bateria baixa** em 20%, 10% e 5%, uma vez por ciclo de
   descarga; podem ser desativadas nas Configurações.
 - **Estado desconectado claro:** ícone cinza/riscado na bandeja e dica na
