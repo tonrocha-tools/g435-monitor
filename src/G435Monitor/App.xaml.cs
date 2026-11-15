@@ -7,6 +7,7 @@ public partial class App : System.Windows.Application
 {
     private const string MutexName = @"Local\G435Monitor.SingleInstance";
     private const string ShowEventName = @"Local\G435Monitor.ShowWindow";
+    private const string TrayArgument = "--tray";
 
     private Mutex? _mutex;
     private EventWaitHandle? _showEvent;
@@ -57,7 +58,12 @@ public partial class App : System.Windows.Application
         };
         _listener.Start();
 
-        _window.Show();
+        // No autostart (--tray) a janela nunca aparece: só o ícone da bandeja.
+        if (e.Args.Any(
+                a => string.Equals(a, TrayArgument, StringComparison.OrdinalIgnoreCase)))
+            _window.StartHidden();
+        else
+            _window.Show();
     }
 
     private void ListenForShowRequest()

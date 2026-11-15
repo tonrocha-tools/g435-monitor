@@ -87,7 +87,7 @@ public sealed class AppSettings
                 if (!File.Exists(exe))
                     exe = Environment.ProcessPath ?? exe;
 
-                key.SetValue(valueName, $"\"{exe}\"");
+                key.SetValue(valueName, $"\"{exe}\" --tray");
             }
             else
             {
