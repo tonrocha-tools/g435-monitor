@@ -6,14 +6,6 @@
 *.suo
 *.userosscache
 
-# Local-only research, diagnostics and references
-references/
-tools/
-tests/
-docs/
-src/G435Diagnostics/
-src/G435Monitor/app-icon.png
-
 # Local runtime files
 logs/
 *.log
